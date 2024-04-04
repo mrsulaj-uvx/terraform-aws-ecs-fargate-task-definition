@@ -127,38 +127,41 @@ resource "aws_ecs_task_definition" "td" {
   skip_destroy             = var.skip_destroy
 
   dynamic "volume" {
-    for_each = var.volumes
+    for_each = var.efs_volumes
+
     content {
       name = volume.value.name
-
       host_path = lookup(volume.value, "host_path", null)
 
-      dynamic "docker_volume_configuration" {
-        for_each = lookup(volume.value, "docker_volume_configuration", [])
-        content {
-          autoprovision = lookup(docker_volume_configuration.value, "autoprovision", null)
-          driver        = lookup(docker_volume_configuration.value, "driver", null)
-          driver_opts   = lookup(docker_volume_configuration.value, "driver_opts", null)
-          labels        = lookup(docker_volume_configuration.value, "labels", null)
-          scope         = lookup(docker_volume_configuration.value, "scope", null)
-        }
-      }
-
-      dynamic "efs_volume_configuration" {
-        for_each = lookup(volume.value, "efs_volume_configuration", [])
-        content {
-          file_system_id          = lookup(efs_volume_configuration.value, "file_system_id", null)
-          root_directory          = lookup(efs_volume_configuration.value, "root_directory", null)
-          transit_encryption      = lookup(efs_volume_configuration.value, "transit_encryption", null)
-          transit_encryption_port = lookup(efs_volume_configuration.value, "transit_encryption_port", null)
-          dynamic "authorization_config" {
-            for_each = lookup(efs_volume_configuration.value, "authorization_config", [])
-            content {
-              access_point_id = lookup(authorization_config.value, "access_point_id", null)
-              iam             = lookup(authorization_config.value, "iam", null)
-            }
+      efs_volume_configuration {
+        file_system_id          = lookup(volume.value, "file_system_id", null)
+        root_directory          = lookup(volume.value, "root_directory", null)
+        transit_encryption      = lookup(volume.value, "transit_encryption", null)
+        transit_encryption_port = lookup(volume.value, "transit_encryption_port", null)
+        dynamic "authorization_config" {
+          for_each = lookup(volume.value, "authorization_config", [])
+          content {
+            access_point_id = lookup(authorization_config.value, "access_point_id", null)
+            iam             = lookup(authorization_config.value, "iam", null)
           }
         }
+      }
+    }
+  }
+
+  dynamic "volume" {
+    for_each = var.docker_volumes
+
+    content {
+      name = volume.value.name
+      host_path = lookup(volume.value, "host_path", null)
+
+      docker_volume_configuration {
+        autoprovision = lookup(volume.value, "autoprovision", null)
+        driver        = lookup(volume.value, "driver", null)
+        driver_opts   = lookup(volume.value, "driver_opts", null)
+        labels        = lookup(volume.value, "labels", null)
+        scope         = lookup(volume.value, "scope", null)
       }
     }
   }
